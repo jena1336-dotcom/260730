@@ -40,14 +40,14 @@ df = pd.DataFrame(box_list)
 for col in ["rank", "audiCnt", "audiAcc", "scrnCnt", "showCnt"]:
     df[col] = pd.to_numeric(df[col])
 
-# 1위 영화 지표 카드 (1위 영화명 글자색을 빨간색 + 굵게 강조)
+# 1위 영화 지표 카드 (텍스트 빨간색 + 굵게)
 top = df.sort_values("rank").iloc[0]
 top1_movie_name = top["movieNm"]
 
 c1, c2, c3 = st.columns(3)
 with c1:
     st.caption("어제 1위")
-    st.markdown(f"<h3 style='color: #FF2A2A; font-weight: bold; margin: 0;'>{top1_movie_name}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color: #FF6B6B; font-weight: bold; margin: 0;'>{top1_movie_name}</h3>", unsafe_allow_html=True)
 c2.metric("어제 관객수", f"{top['audiCnt']:,}명")
 c3.metric("누적 관객", f"{top['audiAcc']:,}명")
 
@@ -60,20 +60,22 @@ st.subheader("📋 박스오피스 TOP 10")
 st.dataframe(table, use_container_width=True)
 
 # -------------------------------------------------------------
-# 📈 관객수 상위 5편 (원그래프 & 색상 지정)
+# 📈 관객수 상위 5편 (파스텔 톤 & 내부 글자 확대)
 # -------------------------------------------------------------
 st.subheader("📈 관객수 상위 5편 비율")
 top5 = table.sort_values("관객수", ascending=False).head(5).copy()
 
-# 파스텔 톤 팔레트 (1위 제외 다른 영화용)
-other_colors = ["#4D96FF", "#6BCB77", "#FFD93D", "#9B51E0", "#FF9F45"]
+# 파스텔 톤 팔레트 설정 (2~5위용)
+pastel_colors = ["#A8DADC", "#457B9D", "#B8E0D2", "#F4A261", "#E8AEB7"]
 
 color_discrete_map = {}
-for i, name in enumerate(top5["영화명"]):
+pastel_idx = 0
+for name in top5["영화명"]:
     if name == top1_movie_name:
-        color_discrete_map[name] = "#FF2A2A"  # 1위 영화는 선명한 빨간색
+        color_discrete_map[name] = "#FF6B6B"  # 1위 영화: 은은하고 예쁜 파스텔 코랄 레드
     else:
-        color_discrete_map[name] = other_colors[i % len(other_colors)]
+        color_discrete_map[name] = pastel_colors[pastel_idx % len(pastel_colors)]
+        pastel_idx += 1
 
 # 파이 차트 생성
 fig = px.pie(
@@ -82,19 +84,21 @@ fig = px.pie(
     values="관객수",
     color="영화명",
     color_discrete_map=color_discrete_map,
-    hole=0.3,  # 도넛 형태 연출 (0으로 설정하면 일반 파이 차트)
+    hole=0.35,  # 도넛 스타일
 )
 
-# 차트 내 텍스트 및 스타일 설정
+# 차트 내 텍스트 및 글자 크기 변경
 fig.update_traces(
     textposition="inside",
     textinfo="label+percent",
+    textfont=dict(size=16, family="sans-serif", color="black"),  # 💡 글자 크기를 16pt로 확대
     hovertemplate="<b>%{label}</b><br>관객수: %{value:,}명<br>비율: %{percent}",
 )
 
 fig.update_layout(
     margin=dict(l=20, r=20, t=30, b=20),
     legend_title_text="영화 제목",
+    legend=dict(font=dict(size=14)),  # 범례 글자 크기도 확대
     showlegend=True,
 )
 
