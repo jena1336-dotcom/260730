@@ -87,9 +87,18 @@ st.plotly_chart(fig, width="stretch")
 # 7. 지도 아래 순위 표 두 개
 c1, c2 = st.columns(2)
 cols = ["시도", "시군구", "중학생비율"]
+
+# 1부터 시작하는 인덱스로 설정하는 함수
+def get_ranked_df(df, ascending=False):
+    res = df.nlargest(10, "중학생비율")[cols] if not ascending else df.nsmallest(10, "중학생비율")[cols]
+    res = res.reset_index(drop=True)
+    res.index = res.index + 1  # 인덱스를 1부터 시작하도록 변경
+    return res
+
 with c1:
     st.subheader("🔴 중학생 비율 높은 곳 10")
-    st.dataframe(merged.nlargest(10, "중학생비율")[cols].reset_index(drop=True))
+    st.dataframe(get_ranked_df(merged, ascending=False))
+
 with c2:
     st.subheader("🔵 중학생 비율 낮은 곳 10")
-    st.dataframe(merged.nsmallest(10, "중학생비율")[cols].reset_index(drop=True))
+    st.dataframe(get_ranked_df(merged, ascending=True))
