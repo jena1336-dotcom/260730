@@ -40,12 +40,14 @@ df = pd.DataFrame(box_list)
 for col in ["rank", "audiCnt", "audiAcc", "scrnCnt", "showCnt"]:
     df[col] = pd.to_numeric(df[col])
 
-# 1위 영화 지표 카드 (1위 영화명 굵게 강조)
+# 1위 영화 지표 카드 (1위 영화명 글자색을 빨간색 + 굵게 강조)
 top = df.sort_values("rank").iloc[0]
 top1_movie_name = top["movieNm"]
 
 c1, c2, c3 = st.columns(3)
-c1.markdown(f"**어제 1위**  \n### 🔴 **{top1_movie_name}**")
+with c1:
+    st.caption("어제 1위")
+    st.markdown(f"<h3 style='color: #FF2A2A; font-weight: bold; margin: 0;'>{top1_movie_name}</h3>", unsafe_allow_html=True)
 c2.metric("어제 관객수", f"{top['audiCnt']:,}명")
 c3.metric("누적 관객", f"{top['audiAcc']:,}명")
 
