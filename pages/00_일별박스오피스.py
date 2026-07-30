@@ -3,14 +3,15 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+import plotly.express as px
 
 st.set_page_config(page_title="박스오피스 대시보드", layout="wide")
 st.title("🎬 어제의 박스오피스")
 
-# 비밀 금고에서 인증키 꺼내기 (코드에는 키를 적지 않는다)
+# 비밀 금고에서 인증키 꺼내기
 KOBIS_KEY = st.secrets["KOBIS_KEY"]
 
-# 한국 시간 기준 어제 날짜를 여덟 자리로 (배포 서버 시계는 외국 기준일 수 있다)
+# 한국 시간 기준 어제 날짜를 여덟 자리로
 yesterday = datetime.now(ZoneInfo("Asia/Seoul")) - timedelta(days=1)
 target_dt = yesterday.strftime("%Y%m%d")
 st.caption(f"조회 기준일(어제): {yesterday.strftime('%Y-%m-%d')}")
@@ -24,7 +25,6 @@ if res.status_code != 200:
 
 data = res.json()
 
-# KOBIS는 키가 틀려도 상태코드 200을 준다. 대신 faultInfo 상자가 온다.
 if "faultInfo" in data:
     st.error("인증키가 올바르지 않습니다. 금고(Secrets)의 KOBIS_KEY를 확인해 주세요.")
     st.stop()
@@ -36,14 +36,16 @@ if not box_list:
 
 df = pd.DataFrame(box_list)
 
-# 글자로 온 숫자들을 진짜 숫자로 바꾸기
+# 숫자 타입 변환
 for col in ["rank", "audiCnt", "audiAcc", "scrnCnt", "showCnt"]:
     df[col] = pd.to_numeric(df[col])
 
-# 1위 영화 지표 카드 세 장
+# 1위 영화 지표 카드 (1위 영화명 굵게 강조)
 top = df.sort_values("rank").iloc[0]
+top1_movie_name = top["movieNm"]
+
 c1, c2, c3 = st.columns(3)
-c1.metric("어제 1위", top["movieNm"])
+c1.markdown(f"**어제 1위**  \n### 🔴 **{top1_movie_name}**")
 c2.metric("어제 관객수", f"{top['audiCnt']:,}명")
 c3.metric("누적 관객", f"{top['audiAcc']:,}명")
 
@@ -53,8 +55,45 @@ table.columns = ["순위", "영화명", "개봉일", "관객수", "누적관객"
 table = table.sort_values("순위").reset_index(drop=True)
 
 st.subheader("📋 박스오피스 TOP 10")
-st.dataframe(table)
+st.dataframe(table, use_container_width=True)
 
-st.subheader("📈 관객수 상위 5편")
-top5 = table.sort_values("관객수", ascending=False).head(5)
-st.bar_chart(top5.set_index("영화명")["관객수"])
+# -------------------------------------------------------------
+# 📈 관객수 상위 5편 (원그래프 & 색상 지정)
+# -------------------------------------------------------------
+st.subheader("📈 관객수 상위 5편 비율")
+top5 = table.sort_values("관객수", ascending=False).head(5).copy()
+
+# 파스텔 톤 팔레트 (1위 제외 다른 영화용)
+other_colors = ["#4D96FF", "#6BCB77", "#FFD93D", "#9B51E0", "#FF9F45"]
+
+color_discrete_map = {}
+for i, name in enumerate(top5["영화명"]):
+    if name == top1_movie_name:
+        color_discrete_map[name] = "#FF2A2A"  # 1위 영화는 선명한 빨간색
+    else:
+        color_discrete_map[name] = other_colors[i % len(other_colors)]
+
+# 파이 차트 생성
+fig = px.pie(
+    top5,
+    names="영화명",
+    values="관객수",
+    color="영화명",
+    color_discrete_map=color_discrete_map,
+    hole=0.3,  # 도넛 형태 연출 (0으로 설정하면 일반 파이 차트)
+)
+
+# 차트 내 텍스트 및 스타일 설정
+fig.update_traces(
+    textposition="inside",
+    textinfo="label+percent",
+    hovertemplate="<b>%{label}</b><br>관객수: %{value:,}명<br>비율: %{percent}",
+)
+
+fig.update_layout(
+    margin=dict(l=20, r=20, t=30, b=20),
+    legend_title_text="영화 제목",
+    showlegend=True,
+)
+
+st.plotly_chart(fig, use_container_width=True)
