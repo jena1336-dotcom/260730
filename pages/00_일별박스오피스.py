@@ -40,9 +40,15 @@ df = pd.DataFrame(box_list)
 for col in ["rank", "audiCnt", "audiAcc", "scrnCnt", "showCnt"]:
     df[col] = pd.to_numeric(df[col])
 
-# 1위 영화 지표 카드 (텍스트 빨간색 + 굵게)
+# 🏆 누적 관객 100만 명 이상 영화명 옆에 트로피 붙이기
+df["movieNm_display"] = df.apply(
+    lambda row: f"{row['movieNm']} 🏆" if row["audiAcc"] >= 1000000 else row["movieNm"],
+    axis=1,
+)
+
+# 1위 영화 지표 카드 (1위 영화명 글자색을 빨간색 + 굵게)
 top = df.sort_values("rank").iloc[0]
-top1_movie_name = top["movieNm"]
+top1_movie_name = top["movieNm_display"]
 
 c1, c2, c3 = st.columns(3)
 with c1:
@@ -52,7 +58,7 @@ c2.metric("어제 관객수", f"{top['audiCnt']:,}명")
 c3.metric("누적 관객", f"{top['audiAcc']:,}명")
 
 # 표를 한국어 열 이름으로 정리
-table = df[["rank", "movieNm", "openDt", "audiCnt", "audiAcc", "scrnCnt"]].copy()
+table = df[["rank", "movieNm_display", "openDt", "audiCnt", "audiAcc", "scrnCnt"]].copy()
 table.columns = ["순위", "영화명", "개봉일", "관객수", "누적관객", "스크린수"]
 table = table.sort_values("순위").reset_index(drop=True)
 
@@ -72,7 +78,7 @@ color_discrete_map = {}
 pastel_idx = 0
 for name in top5["영화명"]:
     if name == top1_movie_name:
-        color_discrete_map[name] = "#FF6B6B"  # 1위 영화: 은은하고 예쁜 파스텔 코랄 레드
+        color_discrete_map[name] = "#FF6B6B"  # 1위 영화: 은은한 파스텔 코랄 레드
     else:
         color_discrete_map[name] = pastel_colors[pastel_idx % len(pastel_colors)]
         pastel_idx += 1
@@ -91,14 +97,14 @@ fig = px.pie(
 fig.update_traces(
     textposition="inside",
     textinfo="label+percent",
-    textfont=dict(size=16, family="sans-serif", color="black"),  # 💡 글자 크기를 16pt로 확대
+    textfont=dict(size=16, family="sans-serif", color="black"),  # 글자 크기 16pt
     hovertemplate="<b>%{label}</b><br>관객수: %{value:,}명<br>비율: %{percent}",
 )
 
 fig.update_layout(
     margin=dict(l=20, r=20, t=30, b=20),
     legend_title_text="영화 제목",
-    legend=dict(font=dict(size=14)),  # 범례 글자 크기도 확대
+    legend=dict(font=dict(size=14)),  # 범례 글자 크기
     showlegend=True,
 )
 
